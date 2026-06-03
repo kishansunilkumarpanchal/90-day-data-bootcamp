@@ -1,0 +1,23 @@
+# Learning Log — Transactions Warehouse Project
+
+## June 3, 2026 — Session 1
+
+**What I built:**
+- Python script that generates 500,000 realistic financial transactions
+- Loaded the CSV into BigQuery as raw_transactions table
+- Ran first analytical SQL query on a cloud warehouse
+
+**What I learned:**
+- timedelta does date arithmetic — START_DATE + timedelta(days=X) 
+  lands you X days forward
+- MERCHANTS dictionary chains with category so merchants 
+  always match their category
+- Random data clusters visually but GROUP BY proves 
+  it's evenly distributed
+
+**Where I got stuck:**
+- (be honest — what felt unclear tonight?)
+
+**Tomorrow:**
+- Build the accounts table
+- Write first JOIN query in BigQuery
