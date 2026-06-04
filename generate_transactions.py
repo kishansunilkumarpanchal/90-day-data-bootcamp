@@ -55,6 +55,24 @@ def generate_accounts():
 print("Generating transactions...")
 transactions = generate_transactions()
 
+def generate_dim_date():
+    dates = []
+    current = START_DATE
+    while current <= END_DATE:
+        dates.append({
+            'date_id': int(current.strftime('%Y%m%d')),
+            'full_date': current,
+            'day_of_week': current.weekday(),
+            'day_name': current.strftime('%A'),
+            'month_number': current.month,
+            'month_name': current.strftime('%B'),
+            'quarter': f'Q{(current.month - 1) // 3 + 1}',
+            'year': current.year,
+            'is_weekend': current.weekday() >= 5,
+            'is_month_end': (current + timedelta(days=1)).month != current.month
+        })
+        current += timedelta(days=1)
+    return dates
 
 
 with open('transactions.csv', 'w', newline='') as f:
@@ -75,6 +93,21 @@ with open('accounts.csv', 'w', newline='') as f:
     writer.writerows(accounts)
 
 print(f"Done. {len(accounts)} rows written to accounts.csv")
+
+print("Generating dim_date...")
+dim_date = generate_dim_date()
+
+with open('dim_date.csv', 'w', newline='') as f:
+    fieldnames=[
+        'date_id', 'full_date', 'day_of_week', 'day_name',
+        'month_number', 'month_name', 'quarter', 'year',
+        'is_weekend', 'is_month_end'
+    ]
+    writer = csv.DictWriter(f, fieldnames=fieldnames)
+    writer.writeheader()
+    writer.writerows(dim_date)
+
+print(f"Done. {len(dim_date)} rows written to dim_date.csv")
 
 
 
