@@ -75,6 +75,21 @@ def generate_dim_date():
     return dates
 
 
+def generate_dim_merchant():
+    unique_merchants = set()
+
+    for t in transactions:
+        unique_merchants.add((t['merchant'], t['category']))
+
+    merchants= []
+    for i, (merchant, category) in enumerate(sorted(unique_merchants), start=1):
+        merchants.append({
+            'merchant_id': i,
+            'merchant_name': merchant,
+            'category': category
+        })
+    return merchants
+
 with open('transactions.csv', 'w', newline='') as f:
     fieldnames = ['txn_id', 'account_id', 'category', 'merchant', 'amount', 'txn_date']
     writer = csv.DictWriter(f, fieldnames=fieldnames)
@@ -111,3 +126,13 @@ print(f"Done. {len(dim_date)} rows written to dim_date.csv")
 
 
 
+print("Generating dim_merchant...")
+dim_merchant = generate_dim_merchant()
+
+with open('dim_merchant.csv', 'w', newline='') as f:
+    fieldnames = ['merchant_id', 'merchant_name', 'category']
+    writer = csv.DictWriter(f, fieldnames=fieldnames)
+    writer.writeheader()
+    writer.writerows(dim_merchant)
+
+print(f"Done. {len(dim_merchant)} rows written to dim_merchant.csv")
