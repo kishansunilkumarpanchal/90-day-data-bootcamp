@@ -28,3 +28,25 @@ python generate_transactions.py
 
 Outputs: `transactions.csv`, `accounts.csv`, `dim_date.csv`
 
+## Project Status
+Phase 1 complete — full star schema built and validated.
+
+## Architecture
+```
+raw_transactions (500K) ──┐
+raw_accounts (100)        │
+                          ▼
+dim_date (366)    ──► fct_transactions (500K view)
+dim_merchant (23) ──►      │
+dim_account (100) ──►      │
+                          ▼
+                    Looker Studio + AI commentary
+                         (Phase 3)
+```
+
+## How to run
+1. Install Python 3.x
+2. Run `python project/generate_transactions.py`
+3. Upload CSVs to BigQuery as shown in the data model
+4. Run `sql-drills/week-01-warehouse.sql` to build the views
+
