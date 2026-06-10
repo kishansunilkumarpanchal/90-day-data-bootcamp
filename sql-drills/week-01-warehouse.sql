@@ -179,3 +179,7 @@ SELECT
 FROM with_lag
 ORDER BY month_number;
 
+06/08/2026
+
+-- "For each account type, show the single biggest spending day of the year — the date, total spend on that day, and how many transactions happened."
+
