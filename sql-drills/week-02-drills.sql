@@ -65,4 +65,86 @@ GROUP BY
   FORMAT_DATE('%A', d.full_date)
 ORDER BY day_of_week;
 
+-- Option A — Top merchants by spend
+Which merchants received the most money? Rank them using DENSE_RANK, show total spend and transaction count per merchant.
 
+SELECT
+  m.merchant_name,
+  ROUND(SUM(t.amount), 0) AS total_spend,
+  COUNT(t.txn_id) AS txn_count,
+  DENSE_RANK() OVER (ORDER BY SUM(t.amount) DESC) AS dense_rnk
+FROM `your-project.transactions_warehouse.fct_transactions` t
+JOIN `your-project.transactions_warehouse.dim_merchant` m
+  ON t.merchant_id = m.merchant_id
+GROUP BY m.merchant_name
+ORDER BY dense_rnk;
+
+-- Option B — Monthly spending trend
+-- How does total spend change month over month? Use DATE_TRUNC to bucket by month, then LAG to calculate the month-over-month change and percentage difference. 
+
+-- Drill 6: MoM spending trend with LAG
+WITH monthly_spend AS (
+  SELECT
+    DATE_TRUNC(d.full_date, MONTH) AS month,
+    ROUND(SUM(t.amount), 0) AS total_spend
+  FROM `your-project.transactions_warehouse.fct_transactions` t
+  JOIN `your-project.transactions_warehouse.dim_date` d
+    ON t.date_id = d.date_id
+  GROUP BY DATE_TRUNC(d.full_date, MONTH)
+),
+with_lag AS (
+  SELECT
+    month,
+    total_spend,
+    COALESCE(LAG(total_spend) OVER (ORDER BY month), 0) AS prev_month_spend
+  FROM monthly_spend
+)
+SELECT
+  month,
+  total_spend,
+  prev_month_spend,
+  (total_spend - prev_month_spend) AS mom_change,
+  ROUND(SAFE_DIVIDE(total_spend - prev_month_spend, prev_month_spend) * 100, 2) AS pct_change
+FROM with_lag
+ORDER BY month;
+
+-- Option C — High-value accounts
+-- Which accounts are in the top 20% by total lifetime spend? Use a window function to calculate each account's percentile.
+
+-- Drill 7: NTILE — top 20% of accounts by lifetime spend
+WITH grouped_data AS (
+  SELECT
+    account_id,
+    ROUND(SUM(amount), 0) AS total_spend
+  FROM `your-project.transactions_warehouse.fct_transactions`
+  GROUP BY account_id
+),
+ntile_data AS (
+  SELECT
+    account_id,
+    total_spend,
+    NTILE(100) OVER (ORDER BY total_spend DESC) AS percentile
+  FROM grouped_data
+)
+SELECT
+  account_id,
+  total_spend,
+  percentile
+FROM ntile_data
+WHERE percentile <= 20
+ORDER BY total_spend DESC;
+
+-- Drill 8: Subquery version of merchant ranking (compare to CTE in Drill 6)
+SELECT merchant_name, total_spend, total_txns, dense_rnk
+FROM (
+  SELECT
+    m.merchant_name,
+    ROUND(SUM(t.amount), 0) AS total_spend,
+    COUNT(t.txn_id) AS total_txns,
+    DENSE_RANK() OVER (ORDER BY SUM(t.amount) DESC) AS dense_rnk
+  FROM `your-project.transactions_warehouse.fct_transactions` t
+  JOIN `your-project.transactions_warehouse.dim_merchant` m
+    ON t.merchant_id = m.merchant_id
+  GROUP BY m.merchant_name
+  ORDER BY dense_rnk
+) AS dense_data;
