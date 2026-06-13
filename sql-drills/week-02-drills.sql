@@ -1,3 +1,5 @@
+06/08/2026
+
 -- Drill 1: ROW_NUMBER — rank transactions per account by amount
 SELECT
   account_id,
@@ -40,6 +42,8 @@ SELECT
   ROUND(amount - prev_txn_amount, 0) AS diff
 FROM lag_data
 ORDER BY account_id, full_date;
+
+06/10/2026
 
 -- Drill 4: DATE_TRUNC — total spend per month
 SELECT
@@ -148,3 +152,78 @@ FROM (
   GROUP BY m.merchant_name
   ORDER BY dense_rnk
 ) AS dense_data;
+
+06/12/2026
+
+-- Drill 9 (no-AI): Total spend and avg transaction by category
+SELECT
+  m.category,
+  ROUND(SUM(t.amount), 0) AS total_spend,
+  ROUND(AVG(t.amount), 0) AS avg_txn_amount
+FROM `your-project.transactions_warehouse.fct_transactions` t
+JOIN `your-project.transactions_warehouse.dim_merchant` m
+  ON t.merchant_id = m.merchant_id
+GROUP BY m.category
+ORDER BY total_spend DESC;
+
+
+-- Drill 10 (no-AI): Accounts with >50 transactions, total spend
+SELECT
+  a.account_id,
+  COUNT(t.txn_id) AS total_count,
+  ROUND(SUM(t.amount), 0) AS total_spend
+FROM `your-project.transactions_warehouse.fct_transactions` t
+JOIN `your-project.transactions_warehouse.dim_account` a
+  ON t.account_id = a.account_id
+GROUP BY a.account_id
+HAVING COUNT(t.txn_id) > 50
+ORDER BY total_spend DESC;
+
+-- Drill 11: Top 3 accounts by spend per merchant category (DENSE_RANK + PARTITION BY)
+WITH group_data AS (
+  SELECT
+    t.account_id,
+    m.category,
+    ROUND(SUM(t.amount), 0) AS total_spend
+  FROM `your-project.transactions_warehouse.fct_transactions` t
+  JOIN `your-project.transactions_warehouse.dim_merchant` m
+    ON t.merchant_id = m.merchant_id
+  GROUP BY t.account_id, m.category
+),
+rnk_data AS (
+  SELECT
+    account_id,
+    category,
+    total_spend,
+    DENSE_RANK() OVER (PARTITION BY category ORDER BY total_spend DESC) AS rnk
+  FROM group_data
+)
+SELECT account_id, category, total_spend, rnk
+FROM rnk_data
+WHERE rnk <= 3
+ORDER BY category, rnk;
+
+-- Drill 12: Top-spending month per account (DENSE_RANK + PARTITION BY account_id)
+WITH group_data AS (
+  SELECT
+    t.account_id,
+    DATE_TRUNC(d.full_date, MONTH) AS month,
+    ROUND(SUM(t.amount), 0) AS total_spend
+  FROM `your-project.transactions_warehouse.fct_transactions` t
+  JOIN `your-project.transactions_warehouse.dim_date` d
+    ON t.date_id = d.date_id
+  GROUP BY t.account_id, DATE_TRUNC(d.full_date, MONTH)
+),
+rnk_data AS (
+  SELECT
+    account_id,
+    month,
+    total_spend,
+    DENSE_RANK() OVER (PARTITION BY account_id ORDER BY total_spend DESC) AS rnk
+  FROM group_data
+)
+SELECT account_id, month, total_spend, rnk
+FROM rnk_data
+WHERE rnk = 1
+ORDER BY account_id;
+
