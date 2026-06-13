@@ -227,3 +227,53 @@ FROM rnk_data
 WHERE rnk = 1
 ORDER BY account_id;
 
+
+-- Drill 13: Spending tier classification + category breakdown
+WITH lifetime_data AS (
+  SELECT
+    account_id,
+    ROUND(SUM(amount), 0) AS lifetime_spend,
+    CASE
+      WHEN SUM(amount) > 10000 THEN 'high'
+      WHEN SUM(amount) >= 3000 THEN 'medium'
+      ELSE 'low'
+    END AS spending_level
+  FROM `your-project.transactions_warehouse.fct_transactions`
+  GROUP BY account_id
+),
+category_data AS (
+  SELECT
+    t.account_id,
+    m.category,
+    ROUND(SUM(t.amount), 0) AS category_total
+  FROM `your-project.transactions_warehouse.fct_transactions` t
+  JOIN `your-project.transactions_warehouse.dim_merchant` m
+    ON t.merchant_id = m.merchant_id
+  GROUP BY t.account_id, m.category
+)
+SELECT l.account_id, l.spending_level, c.category, c.category_total
+FROM lifetime_data l
+JOIN category_data c
+  ON l.account_id = c.account_id
+ORDER BY l.account_id, c.category_total DESC;
+
+
+-- Drill 14: Monthly spend with running total per account (SUM OVER)
+WITH monthly_data AS (
+  SELECT
+    t.account_id,
+    DATE_TRUNC(d.full_date, MONTH) AS month,
+    ROUND(SUM(t.amount), 0) AS total_spend
+  FROM `your-project.transactions_warehouse.fct_transactions` t
+  JOIN `your-project.transactions_warehouse.dim_date` d
+    ON t.date_id = d.date_id
+  GROUP BY t.account_id, DATE_TRUNC(d.full_date, MONTH)
+)
+SELECT
+  account_id,
+  month,
+  total_spend,
+  SUM(total_spend) OVER (PARTITION BY account_id ORDER BY month) AS running_total
+FROM monthly_data
+ORDER BY account_id, month;
+
