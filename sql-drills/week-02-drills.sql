@@ -277,3 +277,25 @@ SELECT
 FROM monthly_data
 ORDER BY account_id, month;
 
+
+-- Drill 15: "Can you pull a report showing, for each account, their total spend, their rank among all accounts by total spend, and what percentage of the overall company-wide spend they represent? Order by rank."
+
+WITH group_data AS (
+  SELECT
+    account_id,
+    ROUND(SUM(amount), 0) AS total_spend
+  FROM `your-project.transactions_warehouse.fct_transactions`
+  GROUP BY account_id
+),
+company_total AS (
+  SELECT SUM(total_spend) AS total_company_spend
+  FROM group_data
+)
+SELECT
+  g.account_id,
+  g.total_spend,
+  DENSE_RANK() OVER (ORDER BY g.total_spend DESC) AS rnk,
+  ROUND(g.total_spend * 100 / c.total_company_spend, 2) AS pct_of_total
+FROM group_data g
+CROSS JOIN company_total c
+ORDER BY rnk;
