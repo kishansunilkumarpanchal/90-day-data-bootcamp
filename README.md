@@ -5,7 +5,7 @@ Python data generation, BigQuery, dbt, and AI-assisted analytics.
 
 Stack: Python · BigQuery · dbt · Looker Studio · OpenAI API
 
-Status: Week 1 of 12 — actively building
+Status: Week 3 of 12 — actively building
 
 ## Data Model
 
@@ -50,3 +50,67 @@ dim_account (100) ──►      │
 3. Upload CSVs to BigQuery as shown in the data model
 4. Run `sql-drills/week-01-warehouse.sql` to build the views
 
+---
+
+## Progress
+
+### Week 1 — Warehouse build (COMPLETE)
+- Generated 500K synthetic transactions via Python
+- Built full star schema on BigQuery (6 tables)
+- Pure functions, main guard, assert-based tests in generator
+- 8 drills in `sql-drills/week-01-drills.sql`
+
+### Week 2 — SQL fluency + analytical query library (COMPLETE)
+- 15 SQL drills in `sql-drills/week-02-drills.sql`
+- Analytical queries covering real fintech use cases:
+  - Merchant rankings by total spend
+  - Month-over-month spending trends with LAG
+  - Account segmentation by spending tier (CASE WHEN)
+  - Top-N-per-group patterns (DENSE_RANK + PARTITION BY)
+  - Running totals (SUM OVER)
+  - Percentage of total company spend per account (CROSS JOIN pattern)
+- Concepts learned: window functions, date functions, WHERE vs HAVING,
+  multi-CTE chaining, subqueries vs CTEs, window frame defaults,
+  SAFE_DIVIDE, CROSS JOIN for scalar CTEs
+
+### Week 3 — Advanced SQL + JOIN types (IN PROGRESS)
+- JOIN types: INNER, LEFT, RIGHT, FULL OUTER
+- Query execution plans + performance thinking
+- Moving averages and advanced window frames
+- BigQuery-specific features
+
+### Weeks 4 — Consolidation + mock interview prep (UPCOMING)
+
+### Weeks 5-8 — dbt + analytics engineering (UPCOMING)
+
+### Weeks 9-12 — Looker Studio + AI commentary layer (UPCOMING)
+
+---
+
+## Repository Structure
+
+90-day-data-bootcamp/
+
+├── project/
+
+│   └── generate_transactions.py
+
+├── sql-drills/
+
+│   ├── week-01-warehouse.sql
+
+│   ├── week-01-drills.sql
+
+│   └── week-02-drills.sql
+
+├── logs/
+
+│   ├── LEARNING_LOG.md
+
+│   └── CHALLENGES.md
+
+├── notes/
+
+│   └── star-schema-design.md
+
+└── README.md
