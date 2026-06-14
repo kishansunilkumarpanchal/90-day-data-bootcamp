@@ -88,7 +88,7 @@ dim_account (100) ──►      │
 ---
 
 ## Repository Structure
-
+```
 90-day-data-bootcamp/
 
 ├── project/
@@ -114,3 +114,4 @@ dim_account (100) ──►      │
 │   └── star-schema-design.md
 
 └── README.md
+```
