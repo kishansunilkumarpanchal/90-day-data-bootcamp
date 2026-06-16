@@ -59,3 +59,27 @@ SELECT
   END AS label
 FROM account_field
 ORDER BY account_name;
+
+06/16/2026
+
+-- Session 13 Drill 1 — 3-month moving average with DATE_TRUNC + FORMAT_DATE
+-- DATE_TRUNC drives grouping/ordering, FORMAT_DATE only for display
+
+WITH monthly_totals AS (
+  SELECT
+    DATE_TRUNC(d.full_date, MONTH) AS year_month,
+    ROUND(SUM(t.amount), 0) AS monthly_total
+  FROM `your-project.transactions_warehouse.fct_transactions` t
+  LEFT JOIN `your-project.transactions_warehouse.dim_date` d
+    ON t.date_id = d.date_id
+  GROUP BY DATE_TRUNC(d.full_date, MONTH)
+)
+SELECT
+  FORMAT_DATE('%Y-%m', year_month) AS y_m,
+  monthly_total,
+  ROUND(AVG(monthly_total) OVER (
+    ORDER BY year_month
+    ROWS BETWEEN 2 PRECEDING AND CURRENT ROW
+  ), 2) AS moving_average
+FROM monthly_totals
+ORDER BY year_month;
