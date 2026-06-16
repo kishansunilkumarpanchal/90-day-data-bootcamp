@@ -83,3 +83,6 @@ SELECT
   ), 2) AS moving_average
 FROM monthly_totals
 ORDER BY year_month;
+
+
+
