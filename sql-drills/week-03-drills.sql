@@ -84,5 +84,48 @@ SELECT
 FROM monthly_totals
 ORDER BY year_month;
 
+06/17/2026
+
+-- Session 14 Drill 1 — Top spending category per account, with tie handling
+-- DENSE_RANK preserves ties; ROW_NUMBER would arbitrarily drop tied categories
+
+WITH category_totals AS (
+  SELECT
+    t.account_id,
+    m.category,
+    ROUND(SUM(t.amount), 0) AS total_spend
+  FROM `your-project.transactions_warehouse.fct_transactions` t
+  LEFT JOIN `your-project.transactions_warehouse.dim_merchant` m
+    ON t.merchant_id = m.merchant_id
+  GROUP BY t.account_id, m.category
+),
+account_data AS (
+  SELECT
+    a.account_name,
+    c.category,
+    c.total_spend,
+    DENSE_RANK() OVER (PARTITION BY a.account_name ORDER BY c.total_spend DESC) AS rnk
+  FROM category_totals c
+  LEFT JOIN `your-project.transactions_warehouse.dim_account` a
+    ON c.account_id = a.account_id
+)
+SELECT account_name, category, total_spend, rnk
+FROM account_data
+WHERE rnk = 1
+ORDER BY total_spend DESC;
+
+-- Session 14 Drill 2 — Accounts with no grocery spend, via correlated NOT EXISTS
+-- Same result as Session 12's LEFT JOIN + NULL check version, different mechanism
+
+SELECT a.account_name, a.account_type
+FROM `your-project.transactions_warehouse.dim_account` a
+WHERE NOT EXISTS (
+  SELECT 1
+  FROM `your-project.transactions_warehouse.fct_transactions` t
+  LEFT JOIN `your-project.transactions_warehouse.dim_merchant` m
+    ON t.merchant_id = m.merchant_id
+  WHERE t.account_id = a.account_id
+    AND m.category = 'groceries
+
 
 
