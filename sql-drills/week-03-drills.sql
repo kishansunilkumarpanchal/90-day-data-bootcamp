@@ -35,8 +35,8 @@ WITH category_field AS (
     t.account_id,
     t.amount,
     m.category
-  FROM `project-6c41e1c3-c960-4d77-bbf.transactions_warehouse.fct_transactions` t
-  LEFT JOIN `project-6c41e1c3-c960-4d77-bbf.transactions_warehouse.dim_merchant` m
+  FROM `your-project.transactions_warehouse.fct_transactions` t
+  LEFT JOIN `your-project.transactions_warehouse.dim_merchant` m
     ON t.merchant_id = m.merchant_id
 ),
 account_field AS (
@@ -44,7 +44,7 @@ account_field AS (
     a.account_name,
     a.account_type,
     SUM(c.amount) AS total_spend
-  FROM `project-6c41e1c3-c960-4d77-bbf.transactions_warehouse.dim_account` a
+  FROM `your-project.transactions_warehouse.dim_account` a
   LEFT JOIN category_field c
     ON a.account_id = c.account_id
     AND c.category = 'groceries'
@@ -114,6 +114,7 @@ FROM account_data
 WHERE rnk = 1
 ORDER BY total_spend DESC;
 
+
 -- Session 14 Drill 2 — Accounts with no grocery spend, via correlated NOT EXISTS
 -- Same result as Session 12's LEFT JOIN + NULL check version, different mechanism
 
@@ -125,7 +126,26 @@ WHERE NOT EXISTS (
   LEFT JOIN `your-project.transactions_warehouse.dim_merchant` m
     ON t.merchant_id = m.merchant_id
   WHERE t.account_id = a.account_id
-    AND m.category = 'groceries
+    AND m.category = 'groceries';
+
+06/21/2026
+
+-- Session 15 Drill 1 — Correlated subquery: accounts whose highest transaction
+-- exceeds the overall dataset average transaction amount
+
+WITH account_max AS (
+  SELECT
+    a.account_name,
+    a.account_type,
+    (SELECT MAX(t.amount)
+     FROM `your-project.transactions_warehouse.fct_transactions` t
+     WHERE t.account_id = a.account_id) AS highest_txn
+  FROM `your-project.transactions_warehouse.dim_account` a
+)
+SELECT account_name, account_type, highest_txn
+FROM account_max
+WHERE highest_txn > (SELECT AVG(amount) 
+                     FROM `your-project.transactions_warehouse.fct_transactions`);
 
 
 
