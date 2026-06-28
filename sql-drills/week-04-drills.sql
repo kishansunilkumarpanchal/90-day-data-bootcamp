@@ -119,3 +119,37 @@ SELECT
   SUM(total_spend) OVER (ORDER BY month) AS running_total
 FROM monthly_totals
 ORDER BY year_month;
+
+06/26/2026
+
+-- Session 19 Drill 1 — Top 2 categories per account type by spend in 2024
+-- Multi-table star schema JOIN + DENSE_RANK + PARTITION BY + two-CTE chain
+
+WITH category_totals AS (
+  SELECT
+    a.account_type,
+    m.category,
+    EXTRACT(YEAR FROM d.full_date) AS txn_year,
+    ROUND(SUM(t.amount), 0) AS total_spend
+  FROM `your-project.transactions_warehouse.fct_transactions` t
+  JOIN `your-project.transactions_warehouse.dim_date` d
+    ON t.date_id = d.date_id
+  JOIN `your-project.transactions_warehouse.dim_merchant` m
+    ON t.merchant_id = m.merchant_id
+  JOIN `your-project.transactions_warehouse.dim_account` a
+    ON t.account_id = a.account_id
+  GROUP BY a.account_type, m.category, EXTRACT(YEAR FROM d.full_date)
+),
+ranked_categories AS (
+  SELECT
+    account_type,
+    category,
+    total_spend,
+    DENSE_RANK() OVER (PARTITION BY account_type ORDER BY total_spend DESC) AS rnk
+  FROM category_totals
+  WHERE txn_year = 2024
+)
+SELECT account_type, category, total_spend, rnk
+FROM ranked_categories
+WHERE rnk <= 2
+ORDER BY account_type, rnk;
