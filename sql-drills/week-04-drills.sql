@@ -67,3 +67,55 @@ JOIN `your-project.transactions_warehouse.fct_transactions` t2
   AND (t1.amount > 2 * t2.amount OR t2.amount > 2 * t1.amount)
 WHERE t1.txn_id < t2.txn_id
   AND t1.account_id = 1;  -- filter to single account for testing
+
+06/24/2026
+
+-- Session 18 Drill 1 — Multi-level aggregation: months where 2+ categories
+-- exceeded 8M in spend. CTE + WHERE preferred over HAVING for two-level aggregation.
+
+WITH monthly_totals AS (
+  SELECT
+    m.category,
+    DATE_TRUNC(d.full_date, MONTH) AS month,
+    ROUND(SUM(t.amount), 0) AS total_monthly_spend
+  FROM `your-project.transactions_warehouse.fct_transactions` t
+  JOIN `your-project.transactions_warehouse.dim_merchant` m
+    ON t.merchant_id = m.merchant_id
+  JOIN `your-project.transactions_warehouse.dim_date` d
+    ON t.date_id = d.date_id
+  GROUP BY m.category, DATE_TRUNC(d.full_date, MONTH)
+),
+category_count AS (
+  SELECT
+    month,
+    COUNT(category) AS total_category_count
+  FROM monthly_totals
+  WHERE total_monthly_spend > 8000000
+  GROUP BY month
+)
+SELECT
+  FORMAT_DATE('%Y-%m', month) AS yyyy_mm,
+  total_category_count
+FROM category_count
+WHERE total_category_count > 1
+ORDER BY yyyy_mm;
+
+-- Session 18 Drill 2 — Running total of monthly spend
+-- SUM OVER without explicit frame defaults to UNBOUNDED PRECEDING to CURRENT ROW
+-- DATE_TRUNC drives grouping/ordering, FORMAT_DATE only at display layer
+
+WITH monthly_totals AS (
+  SELECT
+    DATE_TRUNC(d.full_date, MONTH) AS month,
+    ROUND(SUM(t.amount), 0) AS total_spend
+  FROM `your-project.transactions_warehouse.fct_transactions` t
+  JOIN `your-project.transactions_warehouse.dim_date` d
+    ON t.date_id = d.date_id
+  GROUP BY DATE_TRUNC(d.full_date, MONTH)
+)
+SELECT
+  FORMAT_DATE('%Y-%m', month) AS year_month,
+  total_spend,
+  SUM(total_spend) OVER (ORDER BY month) AS running_total
+FROM monthly_totals
+ORDER BY year_month;
