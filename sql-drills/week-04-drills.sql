@@ -153,3 +153,162 @@ SELECT account_type, category, total_spend, rnk
 FROM ranked_categories
 WHERE rnk <= 2
 ORDER BY account_type, rnk;
+
+06/27/2026
+
+-- Session 20 Warm-up — Q3 vs Q4 2024 spend comparison per account
+-- Conditional aggregation: SUM(CASE WHEN condition THEN value ELSE 0 END)
+-- Assumes dim_date has a quarter column
+
+WITH q_results AS (
+  SELECT
+    a.account_name,
+    ROUND(SUM(CASE WHEN d.quarter = 'Q3' THEN t.amount ELSE 0 END), 0) AS q3_spend,
+    ROUND(SUM(CASE WHEN d.quarter = 'Q4' THEN t.amount ELSE 0 END), 0) AS q4_spend
+  FROM `your-project.transactions_warehouse.fct_transactions` t
+  JOIN `your-project.transactions_warehouse.dim_date` d
+    ON t.date_id = d.date_id
+  JOIN `your-project.transactions_warehouse.dim_account` a
+    ON t.account_id = a.account_id
+  WHERE d.full_date BETWEEN '2024-01-01' AND '2024-12-31'
+  GROUP BY a.account_name
+)
+SELECT
+  account_name,
+  q3_spend,
+  q4_spend,
+  CASE
+    WHEN q3_spend = q4_spend THEN 'No Change'
+    WHEN q3_spend > q4_spend THEN 'Decreased'
+    ELSE 'Increased'
+  END AS label
+FROM q_results
+ORDER BY q4_spend DESC;
+
+
+-- Session 20 Mock Interview Q1 — Merchant loyalty: accounts with more than
+-- 3 distinct merchants. COUNT DISTINCT + HAVING pattern.
+
+SELECT
+  a.account_name,
+  a.account_type,
+  COUNT(DISTINCT t.merchant_id) AS distinct_merchant_count
+FROM `your-project.transactions_warehouse.fct_transactions` t
+JOIN `your-project.transactions_warehouse.dim_account` a
+  ON t.account_id = a.account_id
+GROUP BY a.account_name, a.account_type
+HAVING COUNT(DISTINCT t.merchant_id) > 3
+ORDER BY distinct_merchant_count DESC;
+
+
+-- Session 20 Mock Interview Q2 — Accounts where H2 spend exceeds H1 spend
+-- Conditional aggregation for half-year totals + WHERE on CTE aliases
+-- CTE needed so H1/H2 aliases are available in WHERE clause
+
+WITH half_totals AS (
+  SELECT
+    a.account_name,
+    ROUND(SUM(CASE WHEN d.full_date BETWEEN '2024-01-01' AND '2024-06-30'
+              THEN t.amount ELSE 0 END), 0) AS first_half_spend,
+    ROUND(SUM(CASE WHEN d.full_date BETWEEN '2024-07-01' AND '2024-12-31'
+              THEN t.amount ELSE 0 END), 0) AS second_half_spend
+  FROM `your-project.transactions_warehouse.fct_transactions` t
+  JOIN `your-project.transactions_warehouse.dim_account` a
+    ON t.account_id = a.account_id
+  JOIN `your-project.transactions_warehouse.dim_date` d
+    ON t.date_id = d.date_id
+  GROUP BY a.account_name
+)
+SELECT
+  account_name,
+  first_half_spend,
+  second_half_spend,
+  ROUND(second_half_spend - first_half_spend, 0) AS difference
+FROM half_totals
+WHERE second_half_spend > first_half_spend
+ORDER BY difference DESC;
+
+
+-- Session 20 Mock Interview Q3 — Top 5 accounts by lifetime spend,
+-- monthly spend + 3-month moving average per account
+-- PARTITION BY account_name in moving average restarts window per account
+-- 3 CTE version: one job per CTE — aggregate, rank, monthly totals
+
+WITH agg_data AS (
+  SELECT
+    account_id,
+    ROUND(SUM(amount), 0) AS lifetime_spend
+  FROM `your-project.transactions_warehouse.fct_transactions`
+  GROUP BY account_id
+),
+rnk_data AS (
+  SELECT
+    account_id,
+    DENSE_RANK() OVER (ORDER BY lifetime_spend DESC) AS rnk
+  FROM agg_data
+),
+filter_data AS (
+  SELECT
+    a.account_name,
+    DATE_TRUNC(d.full_date, MONTH) AS month,
+    ROUND(SUM(t.amount), 0) AS total_spend
+  FROM `your-project.transactions_warehouse.fct_transactions` t
+  JOIN rnk_data g ON g.account_id = t.account_id AND g.rnk <= 5
+  JOIN `your-project.transactions_warehouse.dim_account` a
+    ON t.account_id = a.account_id
+  JOIN `your-project.transactions_warehouse.dim_date` d
+    ON t.date_id = d.date_id
+  GROUP BY a.account_name, DATE_TRUNC(d.full_date, MONTH)
+)
+SELECT
+  account_name,
+  FORMAT_DATE('%Y-%m', month) AS year_month,
+  total_spend,
+  ROUND(AVG(total_spend) OVER (
+    PARTITION BY account_name
+    ORDER BY month
+    ROWS BETWEEN 2 PRECEDING AND CURRENT ROW
+  ), 0) AS moving_avg
+FROM filter_data
+ORDER BY account_name, year_month;
+
+
+-- Session 20 Mock Interview Q3 — 2 CTE alternative version
+-- Ranking embedded as subquery in first CTE — fewer steps, slightly
+-- harder to debug but good to know exists
+
+WITH top_accounts AS (
+  SELECT account_id
+  FROM (
+    SELECT
+      account_id,
+      DENSE_RANK() OVER (ORDER BY SUM(amount) DESC) AS rnk
+    FROM `your-project.transactions_warehouse.fct_transactions`
+    GROUP BY account_id
+  )
+  WHERE rnk <= 5
+),
+monthly_spend AS (
+  SELECT
+    a.account_name,
+    DATE_TRUNC(d.full_date, MONTH) AS month,
+    ROUND(SUM(t.amount), 0) AS total_spend
+  FROM `your-project.transactions_warehouse.fct_transactions` t
+  JOIN top_accounts ta ON t.account_id = ta.account_id
+  JOIN `your-project.transactions_warehouse.dim_account` a
+    ON t.account_id = a.account_id
+  JOIN `your-project.transactions_warehouse.dim_date` d
+    ON t.date_id = d.date_id
+  GROUP BY a.account_name, DATE_TRUNC(d.full_date, MONTH)
+)
+SELECT
+  account_name,
+  FORMAT_DATE('%Y-%m', month) AS year_month,
+  total_spend,
+  ROUND(AVG(total_spend) OVER (
+    PARTITION BY account_name
+    ORDER BY month
+    ROWS BETWEEN 2 PRECEDING AND CURRENT ROW
+  ), 0) AS moving_avg
+FROM monthly_spend
+ORDER BY account_name, year_month;
