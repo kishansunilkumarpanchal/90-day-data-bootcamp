@@ -148,4 +148,4 @@ Strong in Excel, financial reporting, reconciliations, and business
 problem understanding. Building modern data skills to combine finance
 domain expertise with analytics engineering and applied AI.
 
-[LinkedIn](www.linkedin.com/in/kishansunilkumarpanchal) | [GitHub](https://github.com/kishansunilkumarpanchal/90-day-data-bootcamp)
+[LinkedIn](https://www.linkedin.com/in/kishansunilkumarpanchal/) | [GitHub](https://github.com/kishansunilkumarpanchal/90-day-data-bootcamp)
