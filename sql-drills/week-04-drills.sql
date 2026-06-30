@@ -312,3 +312,33 @@ SELECT
   ), 0) AS moving_avg
 FROM monthly_spend
 ORDER BY account_name, year_month;
+
+06/28/2026
+
+-- Session 21 Sunday Review — Bottom 1 category per account type
+-- Same pattern as top-N but ORDER BY ASC reverses the ranking direction
+-- DENSE_RANK preserves ties at the bottom
+
+WITH category_totals AS (
+  SELECT
+    a.account_type,
+    m.category,
+    ROUND(SUM(t.amount), 0) AS total_spend
+  FROM `your-project.transactions_warehouse.fct_transactions` t
+  JOIN `your-project.transactions_warehouse.dim_account` a
+    ON t.account_id = a.account_id
+  JOIN `your-project.transactions_warehouse.dim_merchant` m
+    ON t.merchant_id = m.merchant_id
+  GROUP BY a.account_type, m.category
+),
+rnk_data AS (
+  SELECT
+    account_type,
+    category,
+    total_spend,
+    DENSE_RANK() OVER (PARTITION BY account_type ORDER BY total_spend ASC) AS rnk
+  FROM category_totals
+)
+SELECT account_type, category, total_spend
+FROM rnk_data
+WHERE rnk = 1;
