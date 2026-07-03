@@ -1,0 +1,8 @@
+version: 2
+
+sources:
+  - name: raw
+    schema: transactions_warehouse
+    tables:
+      - name: raw_transactions
+      - name: raw_accounts
