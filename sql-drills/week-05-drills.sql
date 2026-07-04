@@ -31,3 +31,38 @@ JOIN `your-project.transactions_warehouse.fct_transactions` t2
 WHERE SAFE_DIVIDE(t1.amount, t2.amount) > 3
   AND t1.txn_id > t2.txn_id
 ORDER BY t1.account_id, t1.date_id;
+
+
+-- ============================================================
+-- Session 24 (Wednesday) — Correlated Subquery Drill
+-- ============================================================
+-- PROBLEM: From fct_transactions, find every transaction whose
+-- amount is greater than the average amount for that transaction's
+-- OWN account. One row per qualifying transaction.
+-- Output: txn_id, account_id, amount.
+--
+-- VERBAL WALKTHROUGH (say this out loud in an interview):
+-- "This is a correlated subquery. The outer query scans each
+--  transaction as t1. For each row, the inner query computes the
+--  average amount for THAT row's specific account — the link line
+--  WHERE t2.account_id = t1.account_id is what makes it correlated,
+--  because the inner query depends on the outer row's account_id.
+--  I keep only transactions whose amount beats their own account's
+--  average. Aliases t1 (outer) and t2 (inner) must be distinct so
+--  the correlation can reference the outer row."
+--
+-- INTERVIEW FOLLOW-UP ("make it faster?"):
+-- A correlated subquery conceptually re-runs the inner query once
+-- per outer row. The window-function version does it in a single
+-- pass: AVG(amount) OVER (PARTITION BY account_id), then compare.
+
+-- ============================================================
+
+SELECT t1.txn_id, t1.account_id, t1.amount
+FROM `your-project.transactions_warehouse.fct_transactions` t1
+WHERE t1.amount > (
+    SELECT AVG(t2.amount)
+    FROM `your-project.transactions_warehouse.fct_transactions` t2
+    WHERE t2.account_id = t1.account_id
+)
+ORDER BY t1.account_id, t1.amount DESC;
