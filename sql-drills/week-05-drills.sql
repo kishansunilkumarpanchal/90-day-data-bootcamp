@@ -66,3 +66,49 @@ WHERE t1.amount > (
     WHERE t2.account_id = t1.account_id
 )
 ORDER BY t1.account_id, t1.amount DESC;
+
+
+-- ============================================================
+-- Session 26 (Saturday) — Largest Transaction Per Account (Window Function)
+-- ============================================================
+-- PROBLEM: From fct_transactions, return each account's single largest
+-- transaction — one row per account. Columns: txn_id, account_id, amount.
+--
+-- VERBAL WALKTHROUGH (say this out loud in an interview):
+-- "I need one row per account, so I use ROW_NUMBER partitioned by
+--  account_id, ordered by amount descending — rank 1 is each account's
+--  largest transaction. I can't filter on the rank in the same SELECT
+--  where I define it, because WHERE runs before the window function
+--  exists, so I wrap the ranking in a CTE and filter rnk = 1 in the
+--  outer query. I add txn_id ASC as a tiebreaker so the result is
+--  deterministic — otherwise ROW_NUMBER breaks ties arbitrarily and
+--  the query isn't reproducible run to run."
+--
+-- GRAIN NOTE (the key decision):
+--   ROW_NUMBER  -> exactly one row per account (ties broken by tiebreaker)
+--   RANK        -> keeps ALL rows tied for the max (same as a correlated
+--                  subquery with amount = MAX)
+--   Choice of function IS the grain decision, not just syntax.
+--
+-- TRAP AVOIDED: cannot reference the window alias (rnk) in WHERE of the
+-- same SELECT — must wrap in a CTE first.
+-- ============================================================
+
+WITH ranked_data AS (
+    SELECT
+        txn_id,
+        account_id,
+        amount,
+        ROW_NUMBER() OVER (
+            PARTITION BY account_id
+            ORDER BY amount DESC, txn_id ASC   -- txn_id = deterministic tiebreaker
+        ) AS rnk
+    FROM `your-project.transactions_warehouse.fct_transactions`
+)
+SELECT
+    txn_id,
+    account_id,
+    amount
+FROM ranked_data
+WHERE rnk = 1
+ORDER BY account_id;
