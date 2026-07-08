@@ -1,3 +1,5 @@
+07/02/2026
+
 -- Drill: Same-account, same-day transaction pairs where one amount > 3x the other
 -- Session 23, Track B (self joins)
 
@@ -31,6 +33,8 @@ JOIN `your-project.transactions_warehouse.fct_transactions` t2
 WHERE SAFE_DIVIDE(t1.amount, t2.amount) > 3
   AND t1.txn_id > t2.txn_id
 ORDER BY t1.account_id, t1.date_id;
+
+07/03/2026
 
 
 -- ============================================================
@@ -67,6 +71,7 @@ WHERE t1.amount > (
 )
 ORDER BY t1.account_id, t1.amount DESC;
 
+07/04/2026
 
 -- ============================================================
 -- Session 26 (Saturday) — Largest Transaction Per Account (Window Function)
@@ -112,3 +117,49 @@ SELECT
 FROM ranked_data
 WHERE rnk = 1
 ORDER BY account_id;
+
+07/05/2026
+
+-- ============================================================
+-- Session 27 (Sunday) — Accounts With No Grocery Transactions (Absence Query)
+-- ============================================================
+-- PROBLEM: Find every account that has NEVER transacted in the 'Groceries'
+-- category. Return account_id and account_name, ordered by account_id.
+--
+-- VERBAL WALKTHROUGH (say this out loud in an interview):
+-- "This is an absence question, so the anchor table has to be the FULL set
+--  of accounts — dim_account — and I subtract the ones that match. I start
+--  from every account and keep it only if NOT EXISTS a grocery transaction
+--  for that account_id. The correlated link WHERE t.account_id = a.account_id
+--  is what ties the subquery to each outer account row.
+--
+--  I use NOT EXISTS rather than NOT IN because NOT IN is unsafe with NULLs:
+--  if the subquery returns even one NULL, every comparison evaluates to
+--  UNKNOWN and the query silently returns zero rows. NOT EXISTS handles
+--  NULLs correctly. A LEFT JOIN with an IS NULL check also works, but with
+--  two joins here NOT EXISTS reads cleaner."
+--
+-- THE TRAP I FELL INTO (worth remembering):
+--   Wrong approach: COUNT grocery transactions per account, then filter
+--   COUNT = 0. This ALWAYS returns zero rows — filtering to grocery
+--   transactions first means accounts with no groceries have no rows in the
+--   CTE at all. They don't get a count of 0; they get no row.
+--   >> You cannot count something that isn't there. 
+--   Rule: for absence questions, anchor on the FULL set and subtract matches.
+--   Never count within a filtered set and look for zero.
+
+-- ============================================================
+
+SELECT
+    a.account_id,
+    a.account_name
+FROM `your-project.transactions_warehouse.dim_account` a
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM `your-project.transactions_warehouse.fct_transactions` t
+    JOIN `your-project.transactions_warehouse.dim_merchant` m
+        ON t.merchant_id = m.merchant_id
+    WHERE t.account_id = a.account_id
+      AND m.category = 'Groceries'
+)
+ORDER BY a.account_id;
