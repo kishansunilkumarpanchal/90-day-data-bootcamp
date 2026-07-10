@@ -32,3 +32,5 @@ models:
       +materialized: view
     marts:
       +materialized: table
+    reporting:
+      +materialized: table
