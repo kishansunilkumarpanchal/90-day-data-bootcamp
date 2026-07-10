@@ -90,3 +90,49 @@ ORDER BY total_spend DESC
 LIMIT 3;
 
 - VERIFIED: top 3 categories account for 13 of 23 total merchants. Plausible.
+
+07/08/2026
+
+-- ============================================================
+-- Session 30 (Wednesday) — Spend by Fiscal Quarter, FY2024
+-- ============================================================
+-- PROBLEM: From fct_transactions joined to dim_date, return total spend and
+-- transaction count by fiscal quarter for fiscal year 2024.
+-- Columns: fiscal_quarter, total_spend, transaction_count. Ordered by quarter.
+--
+-- VERBAL WALKTHROUGH (say this out loud in an interview):
+-- "Output grain is one row per fiscal quarter, so I GROUP BY fiscal_quarter.
+--  I join the fact to dim_date on date_id — the date itself is the key, so no
+--  cast or lookup needed. I filter on fiscal_year, NOT calendar year: that's
+--  the whole reason the date dimension carries a fiscal calendar. Then two
+--  aggregations at that grain — SUM(amount) and COUNT(*)."
+--
+-- WHY INNER JOIN IS SAFE HERE (the key insight):
+--   An INNER JOIN silently drops any transaction whose date_id has no match in
+--   dim_date. Total spend would be understated with no warning. It's safe in
+--   this warehouse ONLY because a relationships test proves every date_id
+--   resolves. Without that test, LEFT JOIN would be the defensive choice.
+--   >> Referential integrity tests are what make INNER JOINs safe. 
+--
+-- STYLE NOTES:
+--   - COUNT(*) counts rows; COUNT(col) skips NULLs in that column. Identical here since transaction_id is tested not_null, but COUNT(*) states the
+--     intent plainly when you want a row count.
+--   - Qualify every column with its table alias in a multi-table query.
+--     Unqualified names resolve until a second table shares the column name.
+--   - Aggregate at full precision. Round at the DISPLAY layer. Rounding inside
+--     the aggregate means four rounded quarters won't sum to a directly
+--     computed annual total — a reconciliation break you introduced yourself.
+-- ============================================================
+
+SELECT
+    d.fiscal_quarter,
+    SUM(t.amount) AS total_spend,
+    COUNT(*) AS transaction_count
+FROM `your-project.dbt_dev.fct_transactions` t
+JOIN `your-project.dbt_dev.dim_date` d
+    ON t.date_id = d.date_id
+WHERE d.fiscal_year = 2024
+GROUP BY d.fiscal_quarter
+ORDER BY d.fiscal_quarter;
+
+-- VERIFIED: 3 rows (FY2024 Q1-Q3). Q4 absent — no 2025 source data. Correct.

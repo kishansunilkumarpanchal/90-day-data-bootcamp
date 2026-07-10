@@ -1,6 +1,5 @@
 version: 2
 
-
 models:
   - name: dim_merchant
     columns:
@@ -29,21 +28,27 @@ models:
         tests:
           - unique
           - not_null
+
       - name: account_id
         tests:
           - not_null
           - relationships:
-              to: ref('dim_account')
-              field: account_id
+              arguments:
+                to: ref('dim_account')
+                field: account_id
+
       - name: merchant_id
         tests:
           - not_null
           - relationships:
-              to: ref('dim_merchant')
-              field: merchant_id
+              arguments:
+                to: ref('dim_merchant')
+                field: merchant_id
+
       - name: date_id
         tests:
           - not_null
           - relationships:
-              to: ref('dim_date')
-              field: date_id
+              arguments:
+                to: ref('dim_date')
+                field: date_id
