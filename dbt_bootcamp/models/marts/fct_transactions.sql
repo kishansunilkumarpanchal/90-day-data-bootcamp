@@ -4,9 +4,9 @@ with transactions as (
 
 ),
 
-accounts as (
+merchants as (
 
-    select * from {{ ref('stg_accounts') }}
+    select * from {{ ref('dim_merchant') }}
 
 ),
 
@@ -15,15 +15,13 @@ final as (
     select
         t.transaction_id,
         t.account_id,
-        a.account_type,
-        t.category,
-        t.merchant_name,
-        t.transaction_date,
+        m.merchant_id,
+        t.transaction_date as date_id,
         t.amount
 
     from transactions as t
-    left join accounts as a
-        on t.account_id = a.account_id
+    left join merchants as m
+        on t.merchant_name = m.merchant_name
 
 )
 
