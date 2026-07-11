@@ -1,0 +1,20 @@
+Berka (PKDD'99 Czech Financial) dataset package
+
+Source used for this package:
+- Mirror repository: https://github.com/jlacko/berka-dataset
+- Current CTU Relational dataset page: https://relational-data.org/dataset/Financial
+
+What is included:
+- Eight CSV exports converted from the mirror's original .asc tables:
+  account, card, client, disp, district, loan, order, trans
+- Original "Financial Data description.pdf" from the same mirror
+
+Important licensing / redistribution note:
+- The CTU Relational page and the GitHub mirror clearly identify the dataset as the PKDD'99 Financial / Berka dataset.
+- However, neither the mirror repository metadata nor the CTU dataset page exposed an explicit modern open-data license during packaging on 2026-07-11.
+- GitHub repository metadata reported `license: null`.
+- Treat redistribution rights for the raw data as uncertain unless you independently confirm permission from the original source or dataset maintainers.
+
+Packaging note:
+- The original table files were semicolon-delimited .asc files.
+- They were converted here to standard UTF-8 comma-delimited CSV files without changing the table names.
