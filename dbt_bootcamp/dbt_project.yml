@@ -28,9 +28,16 @@ clean-targets:         # directories to be removed by `dbt clean`
 
 models:
   dbt_bootcamp:
-    staging:
-      +materialized: view
-    marts:
-      +materialized: table
-    reporting:
-      +materialized: table
+    synthetic:
+      staging:
+        +materialized: view
+      marts:
+        +materialized: table
+      reporting:
+        +materialized: table
+    berka:
+      staging:
+        +materialized: view
+      marts:
+        +materialized: table
+      

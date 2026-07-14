@@ -1,0 +1,61 @@
+version: 2
+
+models:
+  - name: berka_stg_trans
+    description: Cleaned Berka bank transactions at one row per transaction.
+
+    columns:
+      - name: transaction_id
+        tests:
+          - unique
+          - not_null
+
+      - name: account_id
+        tests:
+          - not_null
+
+      - name: transaction_date
+        tests:
+          - not_null
+
+      - name: amount
+        tests:
+          - not_null
+
+      - name: transaction_type
+        tests:
+          - accepted_values:
+              arguments:
+                values:
+                  - credit
+                  - withdrawal
+                  - cash_withdrawal
+
+      - name: transaction_direction
+        tests:
+          - accepted_values:
+              arguments:
+                values:
+                  - credit
+                  - debit
+  - name: berka_stg_account
+    description: Cleaned Berka bank accounts at one row per account.
+
+    columns:
+      - name: account_id
+        tests:
+          - unique
+          - not_null
+      
+      - name: account_open_date
+        tests:
+          - not_null
+
+      - name: statement_frequency
+        tests:
+          - accepted_values:
+              arguments:
+                values:
+                  - monthly
+                  - weekly
+                  - after_transaction

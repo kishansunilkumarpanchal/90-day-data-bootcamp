@@ -59,24 +59,7 @@ ORDER BY g.total_spend DESC;
 --  count transactions, not merchants — returning thousands instead of a
 --  handful. It would look plausible, which is the dangerous kind of wrong."
 --
--- THE MISS (worth remembering):
---   Wrote correct SQL that answered a DIFFERENT question. ORDER BY sorts;
---   it does not limit. "Top 3" requires LIMIT 3. The logic was right but the
---   requirement was dropped.
---   >> Before running: reread the prompt, check off each requirement against
---      the query. Top N -> LIMIT? Sorted -> ORDER BY? All columns present? 
---   A requirements miss reads worse in an interview than a syntax error —
---   it suggests you'll confidently build the wrong thing.
---
--- STANDING REFLEX (Week 1 gap, now catching it prospectively):
---   "I have an aggregate — where's my GROUP BY, and does it list every
---    non-aggregated column?"
---
--- STYLE NOTES:
---   - COUNT(DISTINCT col) not COUNT(DISTINCT(col)). DISTINCT is a keyword
---     modifying the argument, not a function.
---   - Round at the display layer, not inside the query body.
--- ============================================================
+
 
 SELECT
     m.category,
@@ -106,23 +89,7 @@ LIMIT 3;
 --  cast or lookup needed. I filter on fiscal_year, NOT calendar year: that's
 --  the whole reason the date dimension carries a fiscal calendar. Then two
 --  aggregations at that grain — SUM(amount) and COUNT(*)."
---
--- WHY INNER JOIN IS SAFE HERE (the key insight):
---   An INNER JOIN silently drops any transaction whose date_id has no match in
---   dim_date. Total spend would be understated with no warning. It's safe in
---   this warehouse ONLY because a relationships test proves every date_id
---   resolves. Without that test, LEFT JOIN would be the defensive choice.
---   >> Referential integrity tests are what make INNER JOINs safe. 
---
--- STYLE NOTES:
---   - COUNT(*) counts rows; COUNT(col) skips NULLs in that column. Identical here since transaction_id is tested not_null, but COUNT(*) states the
---     intent plainly when you want a row count.
---   - Qualify every column with its table alias in a multi-table query.
---     Unqualified names resolve until a second table shares the column name.
---   - Aggregate at full precision. Round at the DISPLAY layer. Rounding inside
---     the aggregate means four rounded quarters won't sum to a directly
---     computed annual total — a reconciliation break you introduced yourself.
--- ============================================================
+
 
 SELECT
     d.fiscal_quarter,
@@ -136,3 +103,34 @@ GROUP BY d.fiscal_quarter
 ORDER BY d.fiscal_quarter;
 
 -- VERIFIED: 3 rows (FY2024 Q1-Q3). Q4 absent — no 2025 source data. Correct.
+
+07/11/2026
+
+-- ============================================================
+-- Session 32 (Saturday) — Category Spend Pivot by Account Type
+-- ============================================================
+-- PROBLEM: For each account_type, show total groceries spend and total dining
+-- spend as TWO SEPARATE COLUMNS in one row. Columns: account_type, groceries_spend, dining_spend. Ordered by account_type.
+--
+-- VERBAL WALKTHROUGH (say this out loud in an interview):
+-- "This is conditional aggregation — a pivot. The grain is one row per
+--  account_type, so I GROUP BY account_type. To put groceries and dining in
+--  SEPARATE columns rather than stacked rows, I use SUM(CASE WHEN category =
+--  X THEN amount ELSE 0 END) once per category. For any given transaction,
+--  only one CASE matches; the others return 0, so each transaction's amount
+--  lands in exactly one column. The ELSE 0 is what lets a row contribute to
+--  one column while staying neutral in the others."
+
+-- ============================================================
+
+SELECT
+    a.account_type,
+    SUM(CASE WHEN m.category = 'groceries' THEN t.amount ELSE 0 END) AS groceries_spend,
+    SUM(CASE WHEN m.category = 'dining'    THEN t.amount ELSE 0 END) AS dining_spend
+FROM `your-project.transactions_warehouse.fct_transactions` t
+JOIN `your-project.transactions_warehouse.dim_account` a
+    ON t.account_id = a.account_id
+JOIN `your-project.transactions_warehouse.dim_merchant` m
+    ON t.merchant_id = m.merchant_id
+GROUP BY a.account_type
+ORDER BY a.account_type;
