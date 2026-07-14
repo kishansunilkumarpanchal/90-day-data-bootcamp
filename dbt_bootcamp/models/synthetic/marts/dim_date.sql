@@ -1,22 +1,19 @@
 -- dim_date
 -- Grain: one row per calendar date.
--- Range: 2015-2035, generated deliberately wider than the transaction data.
+-- Range: 1990-2035, generated deliberately wider than the transaction data.
 --   Rationale: a missing date row causes a SILENT join failure (transactions
 --   vanish on an inner join, or attributes come back NULL on a left join).
 --   Extra rows cost almost nothing. Asymmetric risk -> generate wide.
---
--- Fiscal year starts April 1 (Canadian federal convention).
--- fiscal_year is named for the year it BEGINS: Apr 2025 - Mar 2026 = FY2025.
---
--- Note: this model has no ref() or source() -- the date spine is synthesized,
--- not sourced, because no upstream system owns the list of calendar dates.
--- It appears as a root node in the DAG with no incoming edges.
+--   Widened from 2015 start to 1990 start in Phase 3 to cover the Berka
+--   dataset (1993-1998) as a conformed dimension shared with the synthetic
+--   pipeline (2015-2035). Both fact tables key against the same date spine.
+
 
 with dates as (
 
     select date_day
     from unnest(
-        generate_date_array('2015-01-01', '2035-12-31', interval 1 day)
+        generate_date_array('1990-01-01', '2035-12-31', interval 1 day)
     ) as date_day
 
 ),

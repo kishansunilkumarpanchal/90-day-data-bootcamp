@@ -1,0 +1,33 @@
+version: 2
+
+models:
+  - name: berka_dim_account
+    description: >
+      Account dimension for the Berka banking dataset.
+      Grain: one row per account.
+
+    columns:
+      - name: account_id
+        description: Natural primary key for each account.
+        tests:
+          - unique
+          - not_null
+
+      - name: account_open_date
+        description: Date the account was opened.
+        tests:
+          - not_null
+          - relationships:
+              to: ref('dim_date')
+              field: date_id
+
+      - name: statement_frequency
+        description: Frequency at which account statements are issued.
+        tests:
+          - not_null
+          - accepted_values:
+              values:
+                - monthly
+                - weekly
+                - after_transaction
+                - unknown
