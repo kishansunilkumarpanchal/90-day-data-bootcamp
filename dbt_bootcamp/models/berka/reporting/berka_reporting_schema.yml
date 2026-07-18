@@ -1,0 +1,136 @@
+version: 2
+
+models:
+  - name: berka_rpt_monthly_metrics
+    description: >
+      Monthly reporting model for Berka transaction activity.
+      Grain: one row per calendar month.
+
+    columns:
+      - name: month_start_date
+        description: First day of the calendar month represented by the row.
+        tests:
+          - unique
+          - not_null
+
+      - name: year
+        description: Calendar year of the reporting month.
+        tests:
+          - not_null
+
+      - name: month_number
+        description: Calendar month number from 1 through 12.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - 1
+                  - 2
+                  - 3
+                  - 4
+                  - 5
+                  - 6
+                  - 7
+                  - 8
+                  - 9
+                  - 10
+                  - 11
+                  - 12
+                quote: false
+
+      - name: month_name
+        description: Full calendar month name.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - January
+                  - February
+                  - March
+                  - April
+                  - May
+                  - June
+                  - July
+                  - August
+                  - September
+                  - October
+                  - November
+                  - December
+
+      - name: transaction_count
+        description: Number of transactions recorded during the month.
+        tests:
+          - not_null
+
+      - name: active_accounts
+        description: Number of distinct accounts with at least one transaction during the month.
+        tests:
+          - not_null
+
+      - name: total_transaction_amount
+        description: Sum of all transaction amounts during the month.
+        tests:
+          - not_null
+
+      - name: total_spend
+        description: Sum of debit transaction amounts during the month.
+        tests:
+          - not_null
+
+      - name: average_transaction_size
+        description: Average transaction amount during the month.
+        tests:
+          - not_null
+
+  - name: berka_rpt_dormant_accounts
+    description: >
+      Account-level dormancy reporting model for the Berka dataset.
+      Grain: one row per account.
+
+    columns:
+      - name: account_id
+        description: Natural account identifier and grain-defining key.
+        tests:
+          - unique
+          - not_null
+
+      - name: account_open_date
+        description: Date the account was opened.
+        tests:
+          - not_null
+
+      - name: statement_frequency
+        description: Frequency at which account statements are issued.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - monthly
+                  - weekly
+                  - after_transaction
+                  - unknown
+
+      - name: last_transaction_date
+        description: Most recent transaction date for the account.
+        # No not_null test: legitimately NULL for never-active accounts.
+
+      - name: days_since_last_activity
+        description: >
+          Number of days between the dataset end date and the account's
+          latest transaction. NULL when the account has never had a transaction.
+        # No not_null test: NULL is intentional for never-active accounts.
+
+      - name: account_status
+        description: >
+          Activity classification based on the configured dormancy threshold.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - active
+                  - dormant
+                  - never_active

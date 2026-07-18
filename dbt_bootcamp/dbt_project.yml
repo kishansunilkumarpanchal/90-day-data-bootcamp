@@ -22,6 +22,10 @@ clean-targets:         # directories to be removed by `dbt clean`
   - "target"
   - "dbt_packages"
 
+vars:
+  dormancy_threshold_days: 90
+  dataset_end_date: '1998-12-31'
+
 
 # Configuring models
 # Full documentation: https://docs.getdbt.com/docs/configuring-models
@@ -40,4 +44,7 @@ models:
         +materialized: view
       marts:
         +materialized: table
+      reporting:
+        +materialized: table
+        
       

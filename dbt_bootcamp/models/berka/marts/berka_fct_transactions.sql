@@ -11,10 +11,8 @@ final as (
         transaction_id,
         account_id,
         transaction_date,
-
         transaction_type,
         transaction_direction,
-
         amount,
 
         case
@@ -24,8 +22,7 @@ final as (
         end as spend_amount,
 
         operation_code,
-        transaction_category_code,
-        
+        transaction_category_code
 
     from transactions
 

@@ -18,16 +18,99 @@ models:
         tests:
           - not_null
           - relationships:
-              to: ref('dim_date')
-              field: date_id
+              arguments:
+                to: ref('dim_date')
+                field: date_id
 
       - name: statement_frequency
         description: Frequency at which account statements are issued.
         tests:
           - not_null
           - accepted_values:
-              values:
-                - monthly
-                - weekly
-                - after_transaction
-                - unknown
+              arguments:
+                values:
+                  - monthly
+                  - weekly
+                  - after_transaction
+                  - unknown
+
+  - name: berka_fct_transactions
+    description: >
+      Berka banking transaction fact table.
+      Grain: one row per transaction, identified by transaction_id.
+
+    columns:
+      - name: transaction_id
+        description: >
+          Natural primary key identifying one bank transaction.
+        tests:
+          - unique
+          - not_null
+
+      - name: account_id
+        description: >
+          Natural foreign key identifying the account associated with
+          the transaction.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('berka_dim_account')
+                field: account_id
+
+      - name: transaction_date
+        description: >
+          Calendar date on which the transaction occurred.
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_date')
+                field: date_id
+
+      - name: transaction_type
+        description: >
+          Readable transaction type decoded from the original Czech
+          transaction code.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - credit
+                  - withdrawal
+                  - cash_withdrawal
+
+      - name: transaction_direction
+        description: >
+          Reporting-friendly direction indicating whether funds entered
+          or left the account.
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - credit
+                  - debit
+
+      - name: amount
+        description: >
+          Original monetary amount of the transaction.
+        tests:
+          - not_null
+
+      - name: spend_amount
+        description: >
+          Transaction amount for debit transactions and zero for credit
+          transactions.
+        tests:
+          - not_null
+
+      - name: operation_code
+        description: >
+          Original banking operation classification associated with the
+          transaction.
+
+      - name: transaction_category_code
+        description: >
+          Original Berka transaction-purpose code, sourced from k_symbol.
